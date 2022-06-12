@@ -11,6 +11,9 @@
 **************************************************************
     12/13/2021 camthesaxman
     Changed filler byte to 0 and added header containing sizes
+**************************************************************
+    06/12/2022 ComplexPlane
+    Work on drop-in replacement for SMB_LZ_TOOL
 **************************************************************/
 #include <algorithm>
 #include <cctype>
@@ -300,15 +303,10 @@ bool ProcessFile(const char* in_file_path, const char* out_file_path, bool encod
     return true;
 }
 
-void quit(const char* error, const char* exec_name) {
-    printf("%s\n\n", error);
-    printf("Usage: %s <path to .lz or .lz.raw>\n", exec_name);
-    exit(1);
-}
-
 int main(int argc, char* argv[]) {
     if (argc == 1) {
-        quit("Missing path to .lz.raw to encode or .lz to decode", argv[0]);
+        fprintf(stderr, "Missing path to .lz.raw to encode or .lz to decode\n");
+        return EXIT_FAILURE;
     }
 
     bool allOk = true;
@@ -325,19 +323,17 @@ int main(int argc, char* argv[]) {
             encode = false;
             output_path.replace_extension(".lz.raw");
         } else {
-            quit("Invalid file name", argv[0]);
+            fprintf(stderr, "Invalid input file name: %s\n", input_path.string().c_str());
+            return EXIT_FAILURE;
         }
 
-        bool res = ProcessFile(input_path.c_str(), output_path.c_str(), encode);
+        bool res = ProcessFile(input_path.string().c_str(), output_path.string().c_str(), encode);
         if (!res) {
-            printf("Failed to %s: %s -> %s\n", encode ? "encode" : "decode", input_path.c_str(),
-                   output_path.c_str());
+            fprintf(stderr, "Failed to %s: %s -> %s\n", encode ? "encode" : "decode",
+                    input_path.c_str(), output_path.c_str());
             allOk = false;
         }
     }
 
-    if (!allOk) {
-        return EXIT_FAILURE;
-    }
-    return EXIT_SUCCESS;
+    return allOk ? EXIT_SUCCESS : EXIT_FAILURE;
 }
