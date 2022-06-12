@@ -316,12 +316,12 @@ int main(int argc, char* argv[]) {
         fs::path output_path = input_path;
         bool encode = false;
         auto ext = input_path.extension().string();
-        if (ext == ".lz.raw") {
+        if (ext == ".raw") {
             encode = true;
             output_path.replace_extension(".lz");
         } else if (ext == ".lz") {
             encode = false;
-            output_path.replace_extension(".lz.raw");
+            output_path.replace_extension(".raw");
         } else {
             fprintf(stderr, "Invalid input file name: %s\n", input_path.string().c_str());
             return EXIT_FAILURE;

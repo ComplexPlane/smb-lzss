@@ -7,6 +7,10 @@ set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "release")
+endif()
+
 # add the executable
 add_executable(SMB_LZ_TOOL
     src/main.cpp)
