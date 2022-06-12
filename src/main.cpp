@@ -12,10 +12,14 @@
     12/13/2021 camthesaxman
     Changed filler byte to 0 and added header containing sizes
 **************************************************************/
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <algorithm>
+#include <cctype>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 #define N 4096 /* size of ring buffer */
 #define F 18   /* upper limit for match_length */
@@ -252,25 +256,17 @@ void Decode(void) /* Just the reverse of Encode(). */
     }
 }
 
-int main(int argc, char* argv[]) {
-    char* s;
-    int should_encode;
-
-    if (argc != 4) {
-        printf(
-            "'lzss e file1 file2' encodes file1 into file2.\n"
-            "'lzss d file2 file1' decodes file2 into file1.\n");
-        return EXIT_FAILURE;
+bool ProcessFile(const char* in_file_path, const char* out_file_path, bool encode) {
+    infile = fopen(in_file_path, "rb");
+    if (infile == NULL) {
+        return false;
     }
-    if ((s = argv[1], s[1] || strpbrk(s, "DEde") == NULL) ||
-        (s = argv[2], (infile = fopen(s, "rb")) == NULL) ||
-        (s = argv[3], (outfile = fopen(s, "wb")) == NULL)) {
-        printf("??? %s\n", s);
-        return EXIT_FAILURE;
+    outfile = fopen(out_file_path, "wb");
+    if (outfile == NULL) {
+        return false;
     }
-    should_encode = toupper(*argv[1]) == 'E';
 
-    if (should_encode) {
+    if (encode) {
         /* leave space for the header */
         fseek(outfile, 8, SEEK_SET);
     } else {
@@ -278,12 +274,12 @@ int main(int argc, char* argv[]) {
         fseek(infile, 8, SEEK_SET);
     }
 
-    if (should_encode)
+    if (encode)
         Encode();
     else
         Decode();
 
-    if (should_encode) {
+    if (encode) {
         unsigned char buf[8];
         int i;
         size_t size;
@@ -301,5 +297,47 @@ int main(int argc, char* argv[]) {
 
     fclose(infile);
     fclose(outfile);
+    return true;
+}
+
+void quit(const char* error, const char* exec_name) {
+    printf("%s\n\n", error);
+    printf("Usage: %s <path to .lz or .lz.raw>\n", exec_name);
+    exit(1);
+}
+
+int main(int argc, char* argv[]) {
+    if (argc == 1) {
+        quit("Missing path to .lz.raw to encode or .lz to decode", argv[0]);
+    }
+
+    bool allOk = true;
+
+    for (int i = 1; i < argc; i++) {
+        fs::path input_path(argv[i]);
+        fs::path output_path = input_path;
+        bool encode = false;
+        auto ext = input_path.extension().string();
+        if (ext == ".lz.raw") {
+            encode = true;
+            output_path.replace_extension(".lz");
+        } else if (ext == ".lz") {
+            encode = false;
+            output_path.replace_extension(".lz.raw");
+        } else {
+            quit("Invalid file name", argv[0]);
+        }
+
+        bool res = ProcessFile(input_path.c_str(), output_path.c_str(), encode);
+        if (!res) {
+            printf("Failed to %s: %s -> %s\n", encode ? "encode" : "decode", input_path.c_str(),
+                   output_path.c_str());
+            allOk = false;
+        }
+    }
+
+    if (!allOk) {
+        return EXIT_FAILURE;
+    }
     return EXIT_SUCCESS;
 }
